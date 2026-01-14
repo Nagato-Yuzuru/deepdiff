@@ -1,6 +1,7 @@
 from deepdiff import DeepDiff
+from deepdiff.colored_view import ColoredView, RED, RESET
+from deepdiff.colored_view import GREEN
 from deepdiff.helper import COLORED_VIEW, COLORED_COMPACT_VIEW
-from deepdiff.colored_view import RED, GREEN, RESET
 
 
 def test_colored_view_basic():
@@ -52,20 +53,20 @@ def test_colored_view_nested_changes():
         "level1": {
             "level2": {
                 "level3": {
-                    "level4": True
-                }
-            }
-        }
+                    "level4": True,
+                },
+            },
+        },
     }
 
     t2 = {
         "level1": {
             "level2": {
                 "level3": {
-                    "level4": False
-                }
-            }
-        }
+                    "level4": False,
+                },
+            },
+        },
     }
 
     diff = DeepDiff(t1, t2, view=COLORED_VIEW)
@@ -187,16 +188,16 @@ def test_colored_view_list_with_ignore_order():
     t1 = {
         "hobbies": [
             "reading",
-            "hiking"
-        ]
+            "hiking",
+        ],
     }
 
     t2 = {
         "hobbies": [
             "hiking",
             "painting",
-            "coding"
-        ]
+            "coding",
+        ],
     }
 
     diff = DeepDiff(t1, t2, view=COLORED_VIEW, ignore_order=True)
@@ -238,10 +239,10 @@ def test_compact_view_basic():
             "zip": "10001",
             "details": {
                 "type": "apartment",
-                "floor": 5
-            }
+                "floor": 5,
+            },
         },
-        "hobbies": ["reading", {"sport": "tennis", "level": "advanced"}]
+        "hobbies": ["reading", {"sport": "tennis", "level": "advanced"}],
     }
 
     t2 = {
@@ -253,11 +254,11 @@ def test_compact_view_basic():
             "zip": "10001",
             "details": {
                 "type": "apartment",
-                "floor": 5
-            }
+                "floor": 5,
+            },
         },
         "team": "abc",  # Added
-        "hobbies": ["reading", {"sport": "tennis", "level": "advanced"}]
+        "hobbies": ["reading", {"sport": "tennis", "level": "advanced"}],
     }
 
     diff = DeepDiff(t1, t2, view=COLORED_COMPACT_VIEW)
@@ -288,32 +289,32 @@ def test_compact_view_nested_changes():
         "level1": {
             "unchanged1": {
                 "deep1": True,
-                "deep2": [1, 2, 3]
+                "deep2": [1, 2, 3],
             },
             "level2": {
                 "a": 1,
                 "b": "test",
                 "c": [1, 2, 3],
-                "d": {"x": 1, "y": 2}
+                "d": {"x": 1, "y": 2},
             },
-            "unchanged2": [1, 2, {"a": 1}]
-        }
+            "unchanged2": [1, 2, {"a": 1}],
+        },
     }
 
     t2 = {
         "level1": {
             "unchanged1": {
                 "deep1": True,
-                "deep2": [1, 2, 3]
+                "deep2": [1, 2, 3],
             },
             "level2": {
                 "a": 2,  # Changed
                 "b": "test",
                 "c": [1, 2, 4],  # Changed
-                "d": {"x": 1, "y": 3}  # Changed
+                "d": {"x": 1, "y": 3},  # Changed
             },
-            "unchanged2": [1, 2, {"a": 1}]
-        }
+            "unchanged2": [1, 2, {"a": 1}],
+        },
     }
 
     diff = DeepDiff(t1, t2, view=COLORED_COMPACT_VIEW)
@@ -379,7 +380,7 @@ def test_compact_view_primitive_siblings():
         "str_sibling": "hello",
         "int_sibling": 42,
         "bool_sibling": True,
-        "nested_sibling": {"a": 1, "b": 2}
+        "nested_sibling": {"a": 1, "b": 2},
     }
 
     t2 = {
@@ -387,7 +388,7 @@ def test_compact_view_primitive_siblings():
         "str_sibling": "hello",
         "int_sibling": 42,
         "bool_sibling": True,
-        "nested_sibling": {"a": 1, "b": 2}
+        "nested_sibling": {"a": 1, "b": 2},
     }
 
     diff = DeepDiff(t1, t2, view=COLORED_COMPACT_VIEW)
@@ -425,3 +426,41 @@ def test_colored_view_bool_evaluation():
     # Scenario 2: With differences
     diff_with_diff_compact = DeepDiff(t1_with_diff, t2_with_diff, view=COLORED_COMPACT_VIEW)
     assert bool(diff_with_diff_compact), "bool(diff) should be True when diffs exist (compact view)"
+
+
+def test_colored_view_with_empty_list_shows_removals():
+    """
+    Tests ColoredView correctly shows about an empty list.
+    This covers the bug where it would just show '[]'.
+    """
+    t1 = [1, 2, 3]
+    t2 = []
+    ddiff = DeepDiff(t1, t2)
+    view = ColoredView(t2, ddiff.tree)
+    result = str(view)
+
+    # The output should contain the removed items, colored in red.
+    assert f"{RED}1{RESET}" in result
+    assert f"{RED}2{RESET}" in result
+    assert f"{RED}3{RESET}" in result
+    assert result.strip().startswith('[')
+    assert result.strip().endswith(']')
+    assert result != '[]'
+
+
+def test_colored_view_with_empty_dict_shows_removals():
+    """
+    Tests ColoredView correctly shows about an empty dict.
+    This covers the bug where it would just show '{}'.
+    """
+    t1 = {'a': 1, 'b': 2}
+    t2 = {}
+    ddiff = DeepDiff(t1, t2)
+    view = ColoredView(t2, ddiff.tree)
+    result = str(view)
+
+    assert f'{RED}{{"a": 1' in result
+    assert f'"b": 2}}{RESET}' in result
+    assert result.strip().startswith(RED)
+    assert result.strip().endswith(RESET)
+    assert result != '{}'

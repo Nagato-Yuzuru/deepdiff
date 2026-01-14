@@ -92,8 +92,9 @@ class ColoredView:
         if isinstance(obj, (dict, list)) and self.compact and not self._has_differences(path):
             return '{...}' if isinstance(obj, dict) else '[...]'
 
+        removed_items = self._get_path_removed(path)
         if isinstance(obj, dict):
-            if not obj:
+            if not obj and not removed_items:
                 return '{}'
             items = []
             for key, value in obj.items():
@@ -103,27 +104,26 @@ class ColoredView:
                     items.append(f'{next_indent}{GREEN}"{key}": {self._colorize_json(value, new_path, indent + 1)}{RESET}')
                 else:
                     items.append(f'{next_indent}"{key}": {self._colorize_json(value, new_path, indent + 1)}')
-            for key, value in self._get_path_removed(path).items():
+            for key, value in removed_items.items():
                 new_path = f"{path}['{key}']" if isinstance(key, str) else f"{path}[{key}]"
                 items.append(f'{next_indent}{RED}"{key}": {self._colorize_json(value, new_path, indent + 1)}{RESET}')
             return '{\n' + ',\n'.join(items) + f'\n{current_indent}' + '}'
 
         elif isinstance(obj, (list, tuple)):
-            if not obj:
+            if not obj and not removed_items:
                 return '[]'
-            removed_map = self._get_path_removed(path)
-            for index in removed_map:
+            for index in removed_items:
                 self._colorize_skip_paths.add(f"{path}[{index}]")
 
             items = []
             remove_index = 0
             for index, value in enumerate(obj):
-                while remove_index == next(iter(removed_map), None):
-                    items.append(f'{next_indent}{RED}{self._format_value(removed_map.pop(remove_index))}{RESET}')
+                while remove_index == next(iter(removed_items), None):
+                    items.append(f'{next_indent}{RED}{self._format_value(removed_items.pop(remove_index))}{RESET}')
                     remove_index += 1
                 items.append(f'{next_indent}{self._colorize_json(value, f"{path}[{index}]", indent + 1)}')
                 remove_index += 1
-            for value in removed_map.values():
+            for value in removed_items.values():
                 items.append(f'{next_indent}{RED}{self._format_value(value)}{RESET}')
             return '[\n' + ',\n'.join(items) + f'\n{current_indent}' + ']'
         else:
